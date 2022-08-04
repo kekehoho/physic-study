@@ -1,0 +1,98 @@
+program main
+
+  !  use KN_diff
+  use KN_diff3
+  use mtmod
+
+  implicit none
+  
+  integer :: iter, iter_max, fileNum,j,i
+  character(30) :: fileName
+  
+  real(8) :: mu_k, q_in_post, k0_e_post_dummy, cross_section_norm, r, pi
+  real(8), dimension(10) :: q_div
+  real(8), dimension(4) :: k_e_post
+  real(8), dimension(4) :: k_e_pre,number
+  real(8) :: k0_e_pre
+  real(8) :: q_in_pre
+  real(8), dimension(3) :: stokes_pre
+  real(8), dimension(3) :: stokes_post
+  real(8) :: cos_chi_pre, sin_chi_pre, cos_chi_post, sin_chi_post, chi_pre, chi_post
+  real(8) :: q_ein_pre, q_eex_pre, u_eex_pre
+
+  
+  integer :: access
+
+  pi = 4*atan(1.0d0)
+
+  iter_max = 100000  ! 100K
+  !iter_max = 1000000  ! 1M
+  !iter_max = 1000  ! 1K
+  !iter_max = 10000 ! 10K
+
+!  number(1:4) = (/0.01d0, 1.0d0, 10.0d0, 100.0d0/)
+
+ ! do j = 1,4
+     do i = 1,10
+
+ ! k_e_pre(1) = number(j)
+  k_e_pre(1) = 0.001d0
+  k_e_pre(2) = k_e_pre(1)/sqrt(3.0d0)
+  k_e_pre(3) = k_e_pre(1)/sqrt(3.0d0)
+  k_e_pre(4) = k_e_pre(1)/sqrt(3.0d0)
+  stokes_pre(1:3) = (/ 1.0d0, 0.0d0, 0.0d0/)
+
+  k0_e_pre  = k_e_pre(1)
+  q_eex_pre = stokes_pre(1)
+  u_eex_pre = stokes_pre(2)
+  q_div(1:10) = (/-0.8d0, -0.6d0, -0.4d0, -0.2d0, 0.0d0, 0.2d0, 0.4d0, 0.6d0, 0.8d0, 1.0d0/)
+
+  write(fileName, '(i2"q_norm_1_0.csv")') i
+  
+      fileName = trim(adjustl(fileName))
+
+      fileNum  = i
+      
+      open(fileNum, file=fileName, status="replace")
+      
+      write(fileNum, '("iter_max = ",i6,", k_e_pre = ",f8.2,", q_exx_pre = ",f5.2,", u_exx_pre = ",f5.2)') &
+        iter_max, k_e_pre(1),stokes_pre(1),stokes_pre(2) 
+      write(fileNum, '("theta, diff, q_in_pre ")')
+      do iter = 1, iter_max
+        do
+           call sample_scattered_photons(k0_e_pre, k_e_pre, k_e_post, mu_k)
+
+           call calc_chi(k_e_pre, k_e_post, mu_k, &
+                cos_chi_pre, sin_chi_pre, cos_chi_post, sin_chi_post, chi_pre, chi_post)
+
+           call rotate_q_chi(q_eex_pre, u_eex_pre, cos_chi_pre, sin_chi_pre, q_ein_pre, chi_pre, chi_post)
+
+           if (k0_e_pre .lt. 1.0d-4) then  ! Thomson Scattering Limit
+              call calc_thomson_diff(k0_e_pre, q_ein_pre, mu_k, &
+                   k0_e_post_dummy, cross_section_norm)
+           else  ! Compton Scattering
+              call calc_kn_diff(k0_e_pre, q_ein_pre, mu_k, &
+                   k0_e_post_dummy, cross_section_norm)
+           end if
+
+           r = grnd()
+                 if (cross_section_norm .gt. r) exit  ! Rejection method
+              end do
+              
+              
+      ! write(fileNum, '(f11.6,",",f11.6,",",f11.6,",",f11.6,","f11.6,","f11.6,","f11.6)') &
+              !     k0_e_post_dummy, mu_k, q_in_post, acos(mu_k), 0.75*cross_section_norm, q_ein_pre, acos(cos(chi_pre))
+              if((q_ein_pre .gt. (q_div(i) - 0.2d0)) .and. (q_ein_pre.le. q_div(i)) )then
+                 write(fileNum, '(f11.6,","f11.6,",",f11.6)')&
+                      acos(mu_k), cross_section_norm, q_ein_pre
+              end if
+              
+          
+           end do
+           
+      close(fileNum)
+   end do
+!end do
+
+   
+end program main
