@@ -23,12 +23,12 @@ program main
     real(8) :: k0_e_pre
     real(8), dimension(3) :: stokes_pre
     real(8), dimension(3) :: stokes_post
-    real(8),dimension(22) :: num,mu_total
-    real(8),dimension(22) :: q,u,n,n_total
-    real(8),dimension(22) :: q_total,u_total,w_total
-    real(8),dimension(22) :: q_norm, u_norm, mu_norm
-    real(8),dimension(22) :: all_mu
-    real(8),dimension(22) :: total_section,all_section
+    real(8),dimension(13) :: num,mu_total
+    real(8),dimension(13) :: q,u,n,n_total
+    real(8),dimension(13) :: q_total,u_total,w_total
+    real(8),dimension(13) :: q_norm, u_norm, mu_norm
+    real(8),dimension(13) :: all_mu
+    real(8),dimension(13) :: total_section,all_section
     real(8) :: chi_pre, chi_post, cos_chi_post
     real(8) :: theta_pre, theta_post, phi_pre, phi_post
     real(8) :: q_ein_pre, q_eex_pre, u_eex_pre
@@ -51,7 +51,7 @@ program main
     real(8) :: rho,kappa_bar,kappa_es,kappa_ff
 
     !test
-    real(8),dimension(22) :: scatter_times,scatter_times_all
+    real(8),dimension(13) :: scatter_times,scatter_times_all
     !test
     integer :: rank_number
     integer :: access
@@ -62,7 +62,7 @@ program main
     !bug? deback option check !FFLAGS = -O2 -g  -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow
 
 
-    write(fileName, '("test3(layer-time,tau=10,scatter_times,iso).csv")')
+    write(fileName, '("test3(layer-time,tau=10,scatter_times).csv")')
     ! write(fileName, '("lv1_x_layer.csv")')                                                                     
     fileName = trim(adjustl(fileName))
 
@@ -115,7 +115,7 @@ program main
     
     call sgrnd(myrank+1)
     
-    do i = 1,22
+    do i = 1,13
           q(i) = 0.0d0
           u(i) = 0.0d0
           q_total(i) = 0.0d0
@@ -270,7 +270,7 @@ program main
                        mu_total(j) = mu_total(j) + abs(mu)*tau
                     end if
                  end do
-                  do j = 8,22
+                  do j = 8,13
                     j_=real(j)
                     if(abs(z_total) .lt. 7 + (j_-7.0d0)*0.2d0 .and. abs(z_total) .ge. 7.0d0 + (j_-8.0d0)*0.2d0)then
                        q(j) = q(j) + stokes_post(1)*tau
@@ -306,7 +306,7 @@ program main
 !             print'("z="f20.2",mu="f11.5",section="f20.5)',z_total,mu,total_section(10)
 !          end if
 
-          do j = 1,10
+          do j = 1,7
              j_=real(j)
              if(abs(z_total) .lt. depth*j_*0.1d0 .and. abs(z_total) .ge. depth*(j_-1.0d0)*0.1d0)then
                 q(j) = q(j) + stokes_post(1)*delta_tau
@@ -315,9 +315,9 @@ program main
                 mu_total(j) = mu_total(j) + mu*delta_tau
              end if
           end do
-           do j = 8,22
+           do j = 8,13
               j_=real(j)
-              if(abs(z_total) .lt. 7 + (j_-7.0d0)*0.2d0 .and. abs(z_total) .ge. 7.0d0 + (j_-8.0d0)*0.2d0)then
+              if(abs(z_total) .lt. 7.0d0 + (j_-7.0d0)*0.2d0 .and. abs(z_total) .ge. 7.0d0 + (j_-8.0d0)*0.2d0)then
                  q(j) = q(j) + stokes_post(1)*delta_tau
                  u(j) = u(j) + stokes_post(2)*delta_tau
                  total_section(j) = total_section(j) + delta_tau
@@ -359,7 +359,7 @@ program main
 
        if(abs(z_total) .gt. depth) exit !Escape Conditions
 
-       do j = 1,22
+       do j = 1,13
           j_=real(j)
           if(abs(z_total) .lt. depth*j_*0.1d0 .and. abs(z_total) .ge. depth*(j_-1.0d0)*0.1d0)then
              scatter_times(j) = scatter_times(j) + 1.0d0
@@ -381,14 +381,14 @@ end do
 
 
 ! print'(f100.90,i5)',w,myrank
- call MPI_REDUCE(q, q_total, 10, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
- call MPI_REDUCE(u, u_total, 10, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
- call MPI_REDUCE(total_section, all_section, 10, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
- call MPI_REDUCE(mu_total, all_mu, 10, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
- call MPI_REDUCE(scatter_times, scatter_times_all, 10, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
+ call MPI_REDUCE(q, q_total, 13, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
+ call MPI_REDUCE(u, u_total, 13, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
+ call MPI_REDUCE(total_section, all_section, 13, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
+ call MPI_REDUCE(mu_total, all_mu, 13, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
+ call MPI_REDUCE(scatter_times, scatter_times_all, 13, MPI_DOUBLE_PRECISION,MPI_SUM,0, wcomm, ierr)
  
  if (myrank ==0) then
-    do i = 1,22
+    do i = 1,13
        q_norm(i) = q_total(i)/all_section(i)
        u_norm(i) = u_total(i)/all_section(i)
        mu_norm(i) = all_mu(i)/all_section(i)
